@@ -1,0 +1,15 @@
+[submodule "libraries/Adafruit_BME280"]
+	path = libraries/Adafruit_BME280
+	url = https://github.com/adafruit/Adafruit_BME280_Library.git
+[submodule "libraries/mhz19_uart"]
+	path = libraries/mhz19_uart
+	url = https://github.com/mshavliuk/mhz19_uart.git
+[submodule "libraries/RTClib"]
+	path = libraries/RTClib
+	url = https://github.com/adafruit/RTClib.git
+[submodule "libraries/Arduino-CMake-NG"]
+	path = libraries/Arduino-CMake-NG
+	url = https://github.com/arduino-cmake/Arduino-CMake-NG.git
+[submodule "libraries/Adafruit_Sensor"]
+	path = libraries/Adafruit_Sensor
+	url = https://github.com/adafruit/Adafruit_Sensor.git
