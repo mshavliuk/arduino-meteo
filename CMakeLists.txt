@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 #set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/cmake/ArduinoToolchain.cmake)
 #
 set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/libraries/Arduino-CMake-NG/cmake/Arduino-Toolchain.cmake)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 set(PROJECT_NAME helloworld)
 
 set(BOARD nano)
@@ -54,8 +54,7 @@ set(${PROJECT_NAME}_AFLAGS -v)
 get_board_id(board_id ${BOARD} ${ARDUINO_CPU})
 
 
-add_arduino_executable(${PROJECT_NAME} ${board_id} src/helloworld.cpp)
-upload_arduino_target(${PROJECT_NAME} "${board_id}" /dev/cu.usbserial-1430)
+add_arduino_executable(${PROJECT_NAME} ${board_id} src/main.cpp)
 
 
 set(Adafruit_BME280_SOURCES
@@ -73,10 +72,23 @@ set(RTC_LIB_SOURCES
         libraries/RTClib/RTClib.cpp
         )
 
+set(STL_SOURCES
+        libraries/ArduinoSTL/src/ArduinoSTL.h
+        libraries/ArduinoSTL/src/vector.cpp
+        libraries/ArduinoSTL/src/func_exception.cpp
+        )
+
+set(TIMER_SOURCES
+        libraries/GyverTimer/GyverTimer.h
+        libraries/GyverTimer/GyverTimer.cpp
+        )
+
 add_arduino_header_only_library(adafruit_sensor ${board_id} libraries/Adafruit_Sensor/Adafruit_Sensor.h)
 add_arduino_library(Adafruit_BME280 ${board_id} ${Adafruit_BME280_SOURCES})
 add_arduino_library(MHZ19_UART ${board_id} ${MHZ19_UART_SOURCES})
 add_arduino_library(RTC ${board_id} ${RTC_LIB_SOURCES})
+add_arduino_library(STL ${board_id} ${STL_SOURCES})
+add_arduino_library(TIMER ${board_id} ${TIMER_SOURCES})
 
 link_platform_library(Adafruit_BME280 Wire ${board_id})
 link_platform_library(MHZ19_UART SoftwareSerial ${board_id})
@@ -86,3 +98,8 @@ link_arduino_library(Adafruit_BME280 adafruit_sensor ${board_id} HEADER_ONLY)
 link_arduino_library(${PROJECT_NAME} Adafruit_BME280 ${board_id})
 link_arduino_library(${PROJECT_NAME} MHZ19_UART ${board_id})
 link_arduino_library(${PROJECT_NAME} RTC ${board_id})
+link_arduino_library(${PROJECT_NAME} STL ${board_id})
+link_arduino_library(${PROJECT_NAME} TIMER ${board_id})
+
+
+upload_arduino_target(${PROJECT_NAME} "${board_id}" /dev/cu.usbserial-1410)
