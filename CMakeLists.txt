@@ -83,23 +83,30 @@ set(TIMER_SOURCES
         libraries/GyverTimer/GyverTimer.cpp
         )
 
+set(LCD_SOURCES
+        libraries/LiquidCrystal_I2C/LiquidCrystal_I2C.h
+        libraries/LiquidCrystal_I2C/LiquidCrystal_I2C.cpp
+        )
+
 add_arduino_header_only_library(adafruit_sensor ${board_id} libraries/Adafruit_Sensor/Adafruit_Sensor.h)
-add_arduino_library(Adafruit_BME280 ${board_id} ${Adafruit_BME280_SOURCES})
-add_arduino_library(MHZ19_UART ${board_id} ${MHZ19_UART_SOURCES})
+add_arduino_library(BME280 ${board_id} ${Adafruit_BME280_SOURCES})
+add_arduino_library(MHZ19 ${board_id} ${MHZ19_UART_SOURCES})
 add_arduino_library(RTC ${board_id} ${RTC_LIB_SOURCES})
 add_arduino_library(STL ${board_id} ${STL_SOURCES})
 add_arduino_library(TIMER ${board_id} ${TIMER_SOURCES})
+add_arduino_library(LCD ${board_id} ${LCD_SOURCES})
 
-link_platform_library(Adafruit_BME280 Wire ${board_id})
-link_platform_library(MHZ19_UART SoftwareSerial ${board_id})
+link_platform_library(BME280 Wire ${board_id})
+link_platform_library(MHZ19 SoftwareSerial ${board_id})
 
-link_arduino_library(Adafruit_BME280 adafruit_sensor ${board_id} HEADER_ONLY)
+link_arduino_library(BME280 adafruit_sensor ${board_id} HEADER_ONLY)
 
-link_arduino_library(${PROJECT_NAME} Adafruit_BME280 ${board_id})
-link_arduino_library(${PROJECT_NAME} MHZ19_UART ${board_id})
+link_arduino_library(${PROJECT_NAME} BME280 ${board_id})
+link_arduino_library(${PROJECT_NAME} MHZ19 ${board_id})
 link_arduino_library(${PROJECT_NAME} RTC ${board_id})
 link_arduino_library(${PROJECT_NAME} STL ${board_id})
 link_arduino_library(${PROJECT_NAME} TIMER ${board_id})
+link_arduino_library(${PROJECT_NAME} LCD ${board_id})
 
 
 upload_arduino_target(${PROJECT_NAME} "${board_id}" /dev/cu.usbserial-1410)

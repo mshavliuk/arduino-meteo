@@ -1,3 +1,5 @@
+#pragma once
+
 #include <Arduino.h>
 #include <GyverTimer.h>
 #include <MHZ19_uart.h>
@@ -12,12 +14,10 @@
 
 class Sensors {
 public:
-    Sensors() {
+    Sensors(): mhz19(MHZ_TX, MHZ_RX), bme(), timer(MS, 5000) {
         Serial.print("Sensors setup");
-        this->mhz19 = MHZ19_uart(MHZ_TX, MHZ_RX);
         this->mhz19.setAutoCalibration(false);
 
-        this->bme = Adafruit_BME280();
         this->bme.begin(&Wire);
         this->bme.setSampling(Adafruit_BME280::MODE_FORCED,
                      Adafruit_BME280::SAMPLING_X16, // temperature
@@ -28,8 +28,6 @@ public:
         Serial.println("Could not find a valid BME280 sensor, check wiring!");
         while (1);
     }*/
-
-        this->timer = GTimer(MS, 5000);
     }
 
     boolean isReady() {

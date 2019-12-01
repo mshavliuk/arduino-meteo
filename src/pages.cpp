@@ -1,25 +1,34 @@
+#pragma once
+
 #include <Arduino.h>
 #include <vector>
+#include "display.cpp"
 
 class Page {
 public:
-    virtual void draw() = 0;
+    virtual void draw(Display *display) = 0;
 };
 
 class MainPage : public Page {
-    void draw() override {
+    void draw(Display *display) override {
         Serial.println("draw MainPage");
+
+        display->write("12:40", 0,0, Display::BIG);
+
+        // get sensors data
+        // get time
+
     }
 };
 
 class PlotPage : public Page {
-    void draw() override {
+    void draw(Display *display) override {
         Serial.println("draw PlotPage");
     };
 };
 
 class SettingPage : public Page {
-    void draw() override {
+    void draw(Display *display) override {
         Serial.println("draw SettingPage");
     }
 };
@@ -27,6 +36,13 @@ class SettingPage : public Page {
 
 class Menu {
 public:
+    explicit Menu(Display* display): display(display), currentPageIndex(0) {
+    }
+
+    void tick() {
+        this->pages.at(this->currentPageIndex)->draw(this->display);
+    }
+
     void addPage(Page *page) {
         this->pages.push_back(page);
     }
@@ -37,7 +53,7 @@ public:
             return;
         }
 
-        this->pages.at(index)->draw();
+        this->pages.at(index)->draw(this->display);
         this->currentPageIndex = index;
     }
 
@@ -52,4 +68,5 @@ public:
 private:
     std::vector<Page *> pages;
     unsigned int currentPageIndex;
+    Display *display;
 };

@@ -16,3 +16,6 @@
 [submodule "libraries/ArduinoSTL"]
 	path = libraries/ArduinoSTL
 	url = https://github.com/mike-matera/ArduinoSTL.git
+[submodule "libraries/LiquidCrystal_I2C"]
+	path = libraries/LiquidCrystal_I2C
+	url = https://github.com/johnrickman/LiquidCrystal_I2C.git
