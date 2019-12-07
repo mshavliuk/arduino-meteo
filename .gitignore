@@ -88,7 +88,7 @@ dkms.conf
 !.idea/codeStyles/
 
 # CMake
-cmake-build-debug/
+cmake-build-*
 
 # Mongo Explorer plugin:
 .idea/**/mongoSettings.xml

@@ -2,13 +2,20 @@ cmake_minimum_required(VERSION 3.8)
 #set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/cmake/ArduinoToolchain.cmake)
 #
 set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/libraries/Arduino-CMake-NG/cmake/Arduino-Toolchain.cmake)
-set(CMAKE_CXX_STANDARD 14)
-set(PROJECT_NAME helloworld)
+set(CMAKE_CXX_STANDARD 11)
+set(PROJECT_NAME meteo)
 
 set(BOARD nano)
 set(${PROJECT_NAME}_BOARD nano)
 set(ARDUINO_CPU atmega328old)
-project(${PROJECT_NAME} LANGUAGES C CXX ASM)
+
+option(DEBUG_OUTPUT "Debug output" OFF)
+IF(DEBUG_OUTPUT)
+    add_compile_definitions(DEBUG true)
+ENDIF(DEBUG_OUTPUT)
+
+
+project(${PROJECT_NAME} LANGUAGES C CXX)
 
 # Define additional source and header files or default arduino sketch files
 # set(${PROJECT_NAME}_SRCS)
@@ -16,9 +23,6 @@ project(${PROJECT_NAME} LANGUAGES C CXX ASM)
 
 ### Additional static libraries to include in the target.
 # set(${PROJECT_NAME}_LIBS)
-
-### Main sketch file
-set(${PROJECT_NAME}_SKETCH helloworld.ino)
 
 ### Add project directories into the build
 # add_subdirectory()
@@ -32,7 +36,7 @@ link_directories(${CMAKE_CURRENT_SOURCE_DIR}/)
 # For nested library sources replace ${LIB_NAME} with library name for each library
 # set(_RECURSE true)
 
-#### Additional settings for programmer. From programmers.txt
+#### Additional settings for programmer. From programmers.txtsadf
 # set(${PROJECT_NAME}_PROGRAMMER avrispmkii)
 # set(${PROJECT_NAME}_PORT /dev/cu.usbserial-00000000)
 set(nano.upload.speed 9600)
@@ -75,6 +79,8 @@ set(RTC_LIB_SOURCES
 set(STL_SOURCES
         libraries/ArduinoSTL/src/ArduinoSTL.h
         libraries/ArduinoSTL/src/vector.cpp
+        libraries/ArduinoSTL/src/set.cpp
+        libraries/ArduinoSTL/src/array
         libraries/ArduinoSTL/src/func_exception.cpp
         )
 
@@ -96,6 +102,9 @@ add_arduino_library(STL ${board_id} ${STL_SOURCES})
 add_arduino_library(TIMER ${board_id} ${TIMER_SOURCES})
 add_arduino_library(LCD ${board_id} ${LCD_SOURCES})
 
+
+#set_target_properties(STL PROPERTIES LINKER_LANGUAGE "CXX")
+
 link_platform_library(BME280 Wire ${board_id})
 link_platform_library(MHZ19 SoftwareSerial ${board_id})
 
@@ -109,4 +118,4 @@ link_arduino_library(${PROJECT_NAME} TIMER ${board_id})
 link_arduino_library(${PROJECT_NAME} LCD ${board_id})
 
 
-upload_arduino_target(${PROJECT_NAME} "${board_id}" /dev/cu.usbserial-1410)
+upload_arduino_target(${PROJECT_NAME} "${board_id}" /dev/cu.usbserial-143230)
