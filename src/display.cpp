@@ -2,7 +2,6 @@
 #include <LiquidCrystal_I2C.h>
 #include <vector>
 #include <array>
-#include <set>
 
 #include "logger.cpp"
 
@@ -65,20 +64,6 @@ private:
     LiquidCrystal_I2C lcd;
     Logger logger;
 
-    struct TileComparator {
-        bool operator() (const char_tile& a, const char_tile& b) const {
-            for(auto i = 0; i < (uint8_t) sizeof(char_tile); i++) {
-                if(a.at(i) < b.at(i)) {
-                    return true;
-                }
-            }
-            return false;
-        }
-    };
-
-
-    void getExtraCharSet() {}
-    
     void setBigDigits() {
         this->lcd.createChar(0, LT);
         this->lcd.createChar(1, UB);
@@ -100,52 +85,6 @@ private:
             y++;
         }
         return width;
-    }
-
-    void clearSectors(uint8_t x, uint8_t y, uint8_t height, uint8_t width) {
-        for (auto j = y; j < y + height; j++) {
-            lcd.setCursor(x, j);
-            for (auto i = 0; i < width; i++) {
-                lcd.write(' ');
-            }
-        }
-    }
-
-    std::set<char_tile, TileComparator> makeBigCharThinner(byte_matrix& matrix) {
-        std::set<char_tile, TileComparator> extraChars;
-
-        auto applyBitMask = [](const char_tile charTile, uint8_t mask){
-            char_tile result;
-            for(uint8_t i = 0; i < (uint8_t) sizeof(char_tile); i++) {
-//                result[i] = charTile.at(i) & mask;
-                result[i] = charTile[i];
-            }
-            return result;
-        };
-
-        for(auto& row : matrix) {
-            for(size_t i = 0; i < row.size(); i++) {
-                char_tile tile;
-                if (row[i] == FILL) {
-                    tile = fillTile;
-                } else {
-                    tile = basicChars[row[i]];
-                }
-
-                if (row[i] > sizeof(basicChars) && row[i] != FILL) {
-                    continue;
-                } else if (i == row.size() - 1 || row[i + 1] == SPACE) {
-                    extraChars.insert(applyBitMask(tile, 0x1Eu));
-                } else if (i == 0 || row[i - 1] == SPACE) {
-                    extraChars.insert(applyBitMask(tile, 0x0Fu));
-                } else {
-                    extraChars.insert(tile);
-                }
-                row[i] = extraChars.size() - 1;
-            }
-        }
-
-        return extraChars;
     }
 
     byte_matrix getBigCharByteMatrix(char character) {
@@ -190,32 +129,6 @@ private:
                 this->logger.error("Big char is not supported:", character);
                 return {{63},
                         {63}};
-        }
-    }
-
-    void setExtraTiles(const std::set<char_tile, TileComparator>& tiles) {
-//        for(auto tile : tiles) {
-//            for(auto row : tile) {
-//              Serial.print(row, HEX);
-//                Serial.print(' ');
-//            }
-//            Serial.println(' ');
-//        }
-        uint8_t n = 0;
-        for (auto tile : tiles) {
-            Serial.print("new char #");
-            Serial.print(n, DEC);
-            Serial.print(": ");
-            char tileData[8];
-            for(uint8_t i = 0; i < (uint8_t) tile.size(); i++) {
-                Serial.print(tile[i], HEX);
-                Serial.print(" ");
-                tileData[i] = (char) tile[i];
-            }
-
-
-            this->lcd.createChar(n++, tile.data());
-            Serial.println("");
         }
     }
 
