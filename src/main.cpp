@@ -8,11 +8,13 @@
 #include "pages.cpp"
 #include "sensors.cpp"
 #include "display.cpp"
+#include "logger.cpp"
 
 RTC_DS3231 rtc;
 
 Sensors *sensors;
 Display *display;
+Logger *logger;
 
 void setup_pages(Display *display) {
     Menu *m = new Menu(display);
@@ -26,20 +28,30 @@ void setup_pages(Display *display) {
 }
 
 void setup() {
-    Serial.begin(9600);
-
-//    setup_sensors();
-
-//    sensors = new Sensors();
+    logger = new Logger("main");
+    delay(100);
+    logger->info("Starting setup");
+    sensors = new Sensors();
     display = new Display();
-    display->write("123456", 0, 0, Display::BIG);
-//    setup_pages(display);
+    display->write("2 2:3 0", 0, 0, Display::BIG);
+    setup_pages(display);
+    logger->info("Setup is finished");
 }
 
 
 void loop() {
-    delay(500);
-//    sensors.tick();
+//    delay(500);
+    sensors->tick();
 //    looptest();
 //    delay(5000);
 }
+
+#if !defined(ARDUINO)
+int main() {
+    setup();
+//    while(true) {
+        loop();
+//    }
+    return 0;
+}
+#endif

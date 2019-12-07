@@ -14,23 +14,23 @@
 
 class Sensors {
 public:
-    Sensors(): mhz19(MHZ_TX, MHZ_RX), bme(), timer(MS, 5000) {
-        Serial.print("Sensors setup");
+    Sensors(): mhz19(MHZ_TX, MHZ_RX), bme(), timer(MS, 5000), logger("Sensors") {
+        this->logger.info("Starting setup");
         this->mhz19.setAutoCalibration(false);
 
-        this->bme.begin(&Wire);
+        if (!this->bme.begin(&Wire)) {
+            this->logger.error("Could not find a valid BME280 sensor, check wiring!");
+            while (1);
+        }
         this->bme.setSampling(Adafruit_BME280::MODE_FORCED,
                      Adafruit_BME280::SAMPLING_X16, // temperature
                      Adafruit_BME280::SAMPLING_X16, // pressure
                      Adafruit_BME280::SAMPLING_X16, // humidity
                      Adafruit_BME280::FILTER_OFF);
-        /*    if (! bme.begin(&Wire)) {
-        Serial.println("Could not find a valid BME280 sensor, check wiring!");
-        while (1);
-    }*/
+        this->logger.info("Setup is finished");
     }
 
-    boolean isReady() {
+    bool isReady() {
         if(!this->ready) {
             if(mhz19.getStatus() == 0) {
                 this->ready = true;
@@ -47,21 +47,15 @@ public:
         if(this->timer.isReady() && this->isReady()) {
             mhz_data data = mhz19.getData();
 
-            Serial.print("MHZ_status: ");
-            Serial.println(data.status);
-            Serial.print("CO2: ");
-            Serial.println(data.co2);
-            Serial.print("MHZ_temp: ");
-            Serial.println(data.temp);
+            this->logger.info("MHZ_status:", data.status);
+            this->logger.info("CO2:", data.co2);
+            this->logger.info("MHZ_temp:", data.temp);
 
 
             this->bme.takeForcedMeasurement();
-            Serial.print("BME temp: ");
-            Serial.println(bme.readTemperature());
-            Serial.print("BME hum: ");
-            Serial.println(bme.readHumidity());
-            Serial.print("BME press: ");
-            Serial.println(int(bme.readPressure() * PASCAL_TO_MM_HG));
+            this->logger.info("BME temp:", bme.readTemperature());
+            this->logger.info("BME hum:", bme.readHumidity());
+            this->logger.info("BME press:", int(bme.readPressure() * PASCAL_TO_MM_HG));
         }
     }
 
@@ -70,8 +64,9 @@ public:
 
 
 private:
-    GTimer timer; // TODO: replace with defined value
+    Logger logger;
+    GTimer timer;
     MHZ19_uart mhz19;
     Adafruit_BME280 bme;
-    boolean ready = false;
+    bool ready = false;
 };

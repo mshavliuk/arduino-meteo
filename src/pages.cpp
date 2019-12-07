@@ -1,17 +1,26 @@
 #pragma once
 
-#include <Arduino.h>
 #include <vector>
+
 #include "display.cpp"
+#include "logger.cpp"
 
 class Page {
 public:
+    Page(char* name): logger(name) {};
+
     virtual void draw(Display *display) = 0;
+
+protected:
+    Logger logger;
 };
 
 class MainPage : public Page {
+public:
+    MainPage() : Page("MainPage") {}
+
     void draw(Display *display) override {
-        Serial.println("draw MainPage");
+        this->logger.info("draw MainPage");
 
         display->write("12:40", 0,0, Display::BIG);
 
@@ -22,21 +31,26 @@ class MainPage : public Page {
 };
 
 class PlotPage : public Page {
+public:
+    PlotPage() : Page("PlotPage") {}
     void draw(Display *display) override {
-        Serial.println("draw PlotPage");
+        this->logger.info("draw PlotPage");
     };
 };
 
 class SettingPage : public Page {
+public:
+    SettingPage() : Page("SettingPage") {}
+
     void draw(Display *display) override {
-        Serial.println("draw SettingPage");
+        this->logger.info("draw SettingPage");
     }
 };
 
 
 class Menu {
 public:
-    explicit Menu(Display* display): display(display), currentPageIndex(0) {
+    explicit Menu(Display* display): display(display), currentPageIndex(0), logger("Menu") {
     }
 
     void tick() {
@@ -49,7 +63,7 @@ public:
 
     void showPage(size_t index) {
         if(index >= this->pages.size()) {
-            Serial.println("Out of range error"); // TODO: use logger
+            this->logger.error("Out of range error");
             return;
         }
 
@@ -66,6 +80,7 @@ public:
     }
 
 private:
+    Logger logger;
     std::vector<Page *> pages;
     unsigned int currentPageIndex;
     Display *display;
