@@ -1,7 +1,6 @@
 #pragma once
 #include <LiquidCrystal_I2C.h>
 #include <vector>
-#include <array>
 
 #include "logger.cpp"
 
@@ -9,145 +8,115 @@
 #define SPACE 32
 #define FILL 255
 
+#define LOG_LEVEL Logger::INFO
+
+#define ARRAY_LENGTH(x) (sizeof(x) / sizeof((x)[0]))
+
 typedef std::vector<std::vector<uint8_t>> byte_matrix;
-typedef std::array<uint8_t, 8> char_tile;
-
-uint8_t LT[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F, 0x1F};
-uint8_t UB[8] = {0x1F, 0x1F, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x00};
-uint8_t UMB[8] = {0x1F, 0x1F, 0x1F, 0x00, 0x00, 0x00, 0x1F, 0x1F};
-uint8_t LMB[8] = {0x1F, 0x00, 0x00, 0x00, 0x00, 0x1F, 0x1F, 0x1F};
-uint8_t LM2[8] = {0x1F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-uint8_t LB[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x1F, 0x1F, 0x1F};
 
 
-const char_tile basicChars[] = {
+Display::Display() : lcd(DISPLAY_ADDR, 20, 4), logger(F("Display"), LOG_LEVEL) {
+    this->logger.info(F("init display"));
+    this->lcd.init();
+    this->lcd.backlight();
+    this->lcd.cursor_off();
+    this->lcd.blink_off();
+}
+
+uint8_t Display::write(const char *string, const uint8_t x, const uint8_t y, const modes mode) {
+    this->logger.info(F("Writing string:"), string);
+
+    if (mode == NORMAL) {
+        this->lcd.setCursor(x, y);
+        this->lcd.print(string);
+    } else if (mode == BIG) {
+        this->setBigDigits();
+
+        return this->writeBig(string, x, y);
+    }
+    return 0;
+}
+
+uint8_t Display::writeBig(const char *string, const uint8_t x, const uint8_t y) {
+    uint8_t shift = 0;
+    for (uint8_t cur = 0; string[cur] != '\0'; cur++) {
+        shift += this->writeBigDigit(string[cur], x + shift, y);
+    }
+    return shift;
+}
+
+const char_tile Display::bigCharBasicTiles[] = {
         {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F, 0x1F},
-        {0x1F, 0x1F, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x00},
-        {0x1F, 0x1F, 0x1F, 0x00, 0x00, 0x00, 0x1F, 0x1F},
-        {0x1F, 0x00, 0x00, 0x00, 0x00, 0x1F, 0x1F, 0x1F},
-        {0x1F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-        {0x00, 0x00, 0x00, 0x00, 0x00, 0x1F, 0x1F, 0x1F}
+        {0x1F, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        {0x1F, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x1F, 0x1F},
 };
-const char_tile fillTile = {0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F};
 
-
-class Display {
-public:
-    Display() : lcd(DISPLAY_ADDR, 20, 4), logger("Display") {
-        this->logger.info("init display");
-        this->lcd.init();
-        this->lcd.backlight();
-    }
-
-    enum modes {
-        BIG,
-        NORMAL
-    };
-
-    void write(char *string, uint8_t x, uint8_t y, modes mode = NORMAL) {
-        if (mode == NORMAL) {
-            this->lcd.setCursor(x, y);
-            this->lcd.println(string);
-        } else if (mode == BIG) {
-            this->setBigDigits();
-
-            this->logger.info("Writing big chars:", string);
-            uint8_t shift = 0;
-            for (uint8_t cur = 0; string[cur] != '\0'; cur++) {
-                shift += this->writeBigDigit(string[cur], x + shift, y);
-//                delay(1000);
-            }
+uint8_t Display::drawByBytesMatrix(uint8_t x, uint8_t y, byte_matrix& charBytes) {
+    uint8_t width = 0;
+    for(auto& row : charBytes) {
+        lcd.setCursor(x, y);
+        for(auto& charByte : row) {
+            lcd.write(charByte);
         }
+        width = width > row.size() ? width : row.size();
+        y++;
     }
+    return width;
+}
 
-private:
-    LiquidCrystal_I2C lcd;
-    Logger logger;
-
-    void setBigDigits() {
-        this->lcd.createChar(0, LT);
-        this->lcd.createChar(1, UB);
-        this->lcd.createChar(2, LB);
-        this->lcd.createChar(3, UMB);
-        this->lcd.createChar(4, LMB);
-        this->lcd.createChar(5, LM2);
-        this->lcd.createChar(6, LM2);
+byte_matrix Display::getBigCharByteMatrix(const char character) {
+    switch (character) {
+        case '0':
+            return {{FILL, 1, FILL},
+                    {FILL, 0, FILL}};
+        case '1':
+            return {{SPACE, FILL, SPACE},
+                    {SPACE, FILL, SPACE}};
+        case '2':
+            return {{2,   2, FILL},
+                    {FILL, 2, 2}};
+        case '3':
+            return {{2, 2, FILL},
+                    {2, 2, FILL}};
+        case '4':
+            return {{FILL, 0, FILL},
+                    {1,   1, FILL}};
+        case '5':
+            return {{FILL, 2, 2},
+                    {2,   2, FILL}};
+        case '6':
+            return {{FILL, 2, 2},
+                    {FILL, 2, FILL}};
+        case '7':
+            return {{1,  1,   FILL},
+                    {SPACE, FILL, SPACE}};
+        case '8':
+            return {{FILL, 2, FILL},
+                    {FILL, 2, FILL}};
+        case '9':
+            return {{FILL, 2, FILL},
+                    {2,   2, FILL}};
+        case ':':
+            return {{165},
+                    {165}};
+        case ' ':
+            return {{SPACE},
+                    {SPACE}};
+        default:
+            this->logger.error(F("Big char is not supported:"), character);
+            return {{63},
+                    {63}};
     }
+}
 
-    uint8_t drawByBytesMatrix(uint8_t x, uint8_t y, byte_matrix& charBytes) {
-        uint8_t width = 0;
-        for(auto& row : charBytes) {
-            lcd.setCursor(x, y);
-            for(auto& charByte : row) {
-                lcd.write(charByte);
-            }
-            width = width > row.size() ? width : row.size();
-            y++;
-        }
-        return width;
+uint8_t Display::writeBigDigit(const char character, const uint8_t x, const uint8_t y) {
+    auto charBytes = this->getBigCharByteMatrix(character);
+    uint8_t width = this->drawByBytesMatrix(x, y, charBytes);
+    return width;
+}
+
+void Display::setBigDigits() {
+    for(auto i = 0; i < (uint8_t) ARRAY_LENGTH(Display::bigCharBasicTiles); i++) {
+        this->lcd.createChar(i, const_cast<uint8_t *>(Display::bigCharBasicTiles[i]));
     }
-
-    byte_matrix getBigCharByteMatrix(char character) {
-        switch (character) {
-            case '0':
-                return {{FILL, 1, FILL},
-                        {FILL, 2, FILL}};
-            case '1':
-                return {{SPACE, FILL, SPACE},
-                        {SPACE, FILL, SPACE}};
-            case '2':
-                return {{3,   3, FILL},
-                        {FILL, 4, 4}};
-            case '3':
-                return {{3, 3, FILL},
-                        {4, 4, FILL}};
-            case '4':
-                return {{FILL, 0, FILL},
-                        {5,   5, FILL}};
-            case '5':
-                return {{FILL, 3, 3},
-                        {4,   4, FILL}};
-            case '6':
-                return {{FILL, 3, 3},
-                        {FILL, 4, FILL}};
-            case '7':
-                return {{1,  1,   FILL},
-                        {SPACE, FILL, SPACE}};
-            case '8':
-                return {{FILL, 3, FILL},
-                        {FILL, 4, FILL}};
-            case '9':
-                return {{FILL, 3, FILL},
-                        {4,   4, FILL}};
-            case ':':
-                return {{165},
-                        {165}};
-            case ' ':
-                return {{SPACE},
-                        {SPACE}};
-            default:
-                this->logger.error("Big char is not supported:", character);
-                return {{63},
-                        {63}};
-        }
-    }
-
-    uint8_t writeBigDigit(char character, uint8_t x, uint8_t y) {
-        auto charBytes = this->getBigCharByteMatrix(character);
-
-//        auto tiles = this->makeBigCharThinner(charBytes);
-//        this->makeBigCharThinner(charBytes);
-
-//        Serial.println('Char thinner tile: ');
-//        for(auto tile : tiles) {
-//            for(auto row : tile) {
-//              Serial.print(row, HEX);
-//                Serial.print(' ');
-//            }
-//            Serial.println(' ');
-//        }
-//        this->setExtraTiles(tiles);
-        uint8_t width = this->drawByBytesMatrix(x, y, charBytes);
-        return width;
-    }
-};
+}

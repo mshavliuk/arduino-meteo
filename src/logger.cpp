@@ -1,46 +1,60 @@
 #pragma once
 
 #include <Arduino.h>
+#include <Wire.h>
 
-
+#if !DEBUG
+#define info(...) noop()
+#endif
 
 class Logger {
 public:
-    Logger(): Logger("") {
-    }
+    enum Levels {
+        ERROR,
+        INFO,
+    };
 
-
-    Logger(char* name): name(name), hasName(name[0] != '\0') {
+    Logger(const __FlashStringHelper *name, Levels level = INFO) : name(name), level(level) {
         Serial.begin(9600);
     }
 
     template<typename... Args>
-    void error(Args... args)
-    {
-        Serial.print("ERROR: ");
+    void error(Args... args) {
+        if(!this->level >= ERROR) {
+            return;
+        }
+
+        this->print('[');
+        this->print(this->name);
+        this->print(F("] "));
+        Serial.print(F("ERROR: "));
         this->print(args...);
         Serial.print('\n');
         Serial.flush();
     }
 
-    template<typename... Args>
-    void info(Args... args)
-    {
 #if DEBUG
-        if(this->hasName) {
-            this->print('[');
-            this->print(this->name);
-            this->print("] ");
+    template<typename... Args>
+    void info(Args... args) {
+        if(!this->level >= INFO) {
+            return;
         }
+
+        this->print('[');
+        this->print(this->name);
+        this->print(F("] "));
+        Serial.print(F("INFO: "));
         this->print(args...);
         Serial.print('\n');
         Serial.flush();
-#endif
     }
+#endif
+
+    void noop() {}
 
 private:
-    bool hasName;
-    char* name;
+    const __FlashStringHelper *name;
+    Levels level;
 
     template<typename T, typename... Args>
     void print(T t, Args... args) {
@@ -48,7 +62,8 @@ private:
         Serial.print(' ');
         this->print(args...);
     }
-    template <typename T>
+
+    template<typename T>
     void print(T t) {
         Serial.print(t);
     }

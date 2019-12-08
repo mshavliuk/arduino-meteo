@@ -79,7 +79,6 @@ set(RTC_LIB_SOURCES
 set(STL_SOURCES
         libraries/ArduinoSTL/src/ArduinoSTL.h
         libraries/ArduinoSTL/src/vector.cpp
-        libraries/ArduinoSTL/src/set.cpp
         libraries/ArduinoSTL/src/array
         libraries/ArduinoSTL/src/func_exception.cpp
         )

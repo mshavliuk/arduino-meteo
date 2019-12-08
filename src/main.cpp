@@ -1,57 +1,44 @@
-#include <Arduino.h>
-
+#include <Wire.h>
 
 #define MHZ_RX 2
 #define MHZ_TX 3
 
-#include <RTClib.h>
+#include "display.h"
 #include "pages.cpp"
 #include "sensors.cpp"
-#include "display.cpp"
 #include "logger.cpp"
 
-RTC_DS3231 rtc;
 
 Sensors *sensors;
 Display *display;
 Logger *logger;
-
-void setup_pages(Display *display) {
-    Menu *m = new Menu(display);
-    m->addPage(new MainPage());
-    m->addPage(new PlotPage());
-    m->addPage(new PlotPage());
-    m->addPage(new PlotPage());
-    m->addPage(new SettingPage());
-
-    m->showPage(0);
-}
+Menu *menu;
 
 void setup() {
-    logger = new Logger("main");
-    delay(100);
-    logger->info("Starting setup");
+    logger = new Logger(F("main"));
+    logger->info(F("Starting setup"));
     sensors = new Sensors();
     display = new Display();
-    display->write("2 2:3 0", 0, 0, Display::BIG);
-    setup_pages(display);
-    logger->info("Setup is finished");
+    menu = new Menu(display, sensors);
+    menu->show();
+    logger->info(F("Setup is finished"));
 }
 
 
 void loop() {
-//    delay(500);
     sensors->tick();
-//    looptest();
-//    delay(5000);
+    menu->tick();
 }
 
 #if !defined(ARDUINO)
+#include <unistd.h>
+
 int main() {
     setup();
-//    while(true) {
+    while(true) {
         loop();
-//    }
+        sleep(1);
+    }
     return 0;
 }
 #endif
