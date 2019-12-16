@@ -3,7 +3,6 @@
 #include <GyverTimer.h>
 #include <vector>
 #include <Wire.h>
-#include <cstdlib>
 
 #include "display.cpp"
 #include "logger.cpp"
@@ -27,12 +26,12 @@ protected:
 
 class MainPage : public Page {
 public:
-    MainPage(Sensors *sensors) : Page(F("MainPage")), sensors(sensors), timer(MS, 5000), displayDots(true) {}
+    MainPage(Sensors *sensors) : Page(F("MainPage")), sensors(sensors), timer(MS, 500), displayDots(true) {}
 
     void draw(Display *display) override {
         this->logger.info(F("draw MainPage"));
 
-        if(!sensors->isReady()) {
+        if(!sensors->isMeasuresReady()) {
             display->write("Waiting for sensors", 0, 1);
             return;
         }
@@ -81,7 +80,6 @@ private:
     bool displayDots;
 
     char *itoa(uint16_t n, uint8_t numberMaxWidth, char *buf, const char *postfix = "", bool leadZero = false) {
-        this->logger.info("itoa:", n);
         for(uint8_t i = 0; i < numberMaxWidth; ++i) {
             uint8_t digit = (n / (uint16_t) this->ipow(10, numberMaxWidth - i - 1)) % 10;
             if(!leadZero && digit == 0) {
@@ -103,7 +101,6 @@ private:
 
     char *ftoa(double n, uint8_t width, uint8_t precision, char *buf, const char *postfix = "") {
         this->itoa(n, width - precision - 1, buf, ".");
-        this->logger.info("significant part:", buf);
         double fraction = modf(n, &fraction);
         this->itoa(fraction * ipow(10, precision), precision, &buf[width - precision], postfix, true);
         return buf;

@@ -116,5 +116,6 @@ link_arduino_library(${PROJECT_NAME} STL ${board_id})
 link_arduino_library(${PROJECT_NAME} TIMER ${board_id})
 link_arduino_library(${PROJECT_NAME} LCD ${board_id})
 
+link_platform_library(${PROJECT_NAME} EEPROM ${board_id})
 
 upload_arduino_target(${PROJECT_NAME} "${board_id}" /dev/cu.usbserial-143230)

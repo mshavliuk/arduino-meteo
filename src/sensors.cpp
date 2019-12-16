@@ -57,6 +57,10 @@ public:
         }
     }
 
+    bool isMeasuresReady() {
+        return this->measuresReady;
+    }
+
     bool tick() {
         if (!this->timer.isReady() || !this->isReady()) {
             return false;
@@ -64,18 +68,19 @@ public:
 
         mhz_data mhzData = this->mhz19.getData();
 
-        this->logger.info(F("MHZ_status:"), mhzData.status);
         this->logger.info(F("CO2:"), mhzData.co2);
         this->logger.info(F("MHZ_temp:"), mhzData.temp);
-
         this->logger.info(F("RTC temp:"), this->rtc.getTemperature());
 
-
         this->bme.takeForcedMeasurement();
+        this->measures = {
+                mhzData.co2,
+                bme.readTemperature(),
+                uint8_t(bme.readHumidity()),
+                uint16_t(bme.readPressure() * PASCAL_TO_MM_HG)
+        };
 
-        this->measures = {mhzData.co2, bme.readTemperature(), bme.readHumidity(),
-                          int(bme.readPressure() * PASCAL_TO_MM_HG)};
-
+        this->measuresReady = true;
         this->logger.info(F("BME temp:"), this->measures.temp);
         this->logger.info(F("BME hum:"), this->measures.humidity);
         this->logger.info(F("BME press:"), this->measures.pressHg);
@@ -87,7 +92,7 @@ public:
     struct Measures {
         uint16_t ppm;
         float temp;
-        float humidity;
+        uint8_t humidity;
         uint16_t pressHg;
     };
 
@@ -107,4 +112,5 @@ private:
     Adafruit_BME280 bme;
     RTC_DS3231 rtc;
     bool ready = false;
+    bool measuresReady = false;
 };

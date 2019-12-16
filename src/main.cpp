@@ -7,6 +7,7 @@
 #include "pages.cpp"
 #include "sensors.cpp"
 #include "logger.cpp"
+#include "storage.cpp"
 
 
 Sensors *sensors;
@@ -22,8 +23,9 @@ void setup() {
     menu = new Menu(display, sensors);
     menu->show();
     logger->info(F("Setup is finished"));
-}
 
+    Storage::get().addMeasures(sensors->getCurrentMeasures());
+}
 
 void loop() {
     sensors->tick();
