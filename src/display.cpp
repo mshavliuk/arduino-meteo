@@ -1,19 +1,5 @@
-#pragma once
-#include <LiquidCrystal_I2C.h>
-#include <vector>
 
-#include "logger.cpp"
-
-#define DISPLAY_ADDR 0x27
-#define SPACE 32
-#define FILL 255
-
-#define LOG_LEVEL Logger::INFO
-
-#define ARRAY_LENGTH(x) (sizeof(x) / sizeof((x)[0]))
-
-typedef std::vector<std::vector<uint8_t>> byte_matrix;
-
+#include "display.h"
 
 Display::Display() : lcd(DISPLAY_ADDR, 20, 4), logger(F("Display"), LOG_LEVEL) {
     this->logger.info(F("init display"));

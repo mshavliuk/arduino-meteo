@@ -10,9 +10,9 @@ set(${PROJECT_NAME}_BOARD nano)
 set(ARDUINO_CPU atmega328old)
 
 option(DEBUG_OUTPUT "Debug output" OFF)
-IF(DEBUG_OUTPUT)
+IF (DEBUG_OUTPUT)
     add_compile_definitions(DEBUG true)
-ENDIF(DEBUG_OUTPUT)
+ENDIF (DEBUG_OUTPUT)
 
 
 project(${PROJECT_NAME} LANGUAGES C CXX)
@@ -58,7 +58,14 @@ set(${PROJECT_NAME}_AFLAGS -v)
 get_board_id(board_id ${BOARD} ${ARDUINO_CPU})
 
 
-add_arduino_executable(${PROJECT_NAME} ${board_id} src/main.cpp)
+
+file(GLOB ${PROJECT_NAME}_SRCS
+#        "src/main.cpp"
+        "src/*.cpp"
+        "src/**/*.cpp"
+        )
+
+add_arduino_executable(${PROJECT_NAME} ${board_id} ${${PROJECT_NAME}_SRCS})
 
 
 set(Adafruit_BME280_SOURCES

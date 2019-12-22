@@ -1,17 +1,19 @@
 #pragma once
 
-#pragma once
+#include <Arduino.h>
 #include <LiquidCrystal_I2C.h>
 #include <vector>
 #include <array>
+#include <inttypes.h>
 
-#include "logger.cpp"
+#include "logger.h"
 
 #define DISPLAY_ADDR 0x27
 #define SPACE 32
 #define FILL 255
-
 #define LOG_LEVEL Logger::ERROR
+#define ARRAY_LENGTH(x) (sizeof(x) / sizeof((x)[0]))
+
 
 typedef std::vector<std::vector<uint8_t>> byte_matrix;
 
@@ -39,4 +41,5 @@ private:
     uint8_t drawByBytesMatrix(uint8_t x, uint8_t y, byte_matrix& charBytes);
     byte_matrix getBigCharByteMatrix(char character);
     uint8_t writeBigDigit(char character, uint8_t x, uint8_t y);
+    // TODO: benchmark
 };
