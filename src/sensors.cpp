@@ -16,22 +16,12 @@ Sensors::Sensors() :
         while (1);  // TODO: display error message on screen
     }
 
-    if (!this->rtc.begin()) {
-        this->logger.error(F("Could not set up an RTC module"));
-        while (1);  // TODO: display error message on screen
-    }
-
     this->bme.setSampling(Adafruit_BME280::MODE_FORCED,
                           Adafruit_BME280::SAMPLING_X16,
                           Adafruit_BME280::SAMPLING_X16,
                           Adafruit_BME280::SAMPLING_X16,
                           Adafruit_BME280::FILTER_OFF);
     this->logger.info(F("Setup is finished"));
-
-    if (RESET_TIME || this->rtc.lostPower()) {
-        RTC_DS3231::adjust(DateTime(F(__DATE__), F(__TIME__)));
-        this->logger.info("Time was adjusted:", F(__DATE__), F(__TIME__));
-    }
 }
 
 bool Sensors::isReady() {
@@ -58,14 +48,10 @@ bool Sensors::tick() {
     this->takeMeasures();
 
     if (this->saveMeasuresTimer.isReady()) {
-        this->saveMeasures();
+        Storage::getInstance().addMeasures(this->measures);
     }
 
     return true;
-}
-
-DateTime Sensors::getDateTime() {
-    return RTC_DS3231::now();
 }
 
 void Sensors::takeMeasures() {
@@ -81,10 +67,6 @@ void Sensors::takeMeasures() {
     this->logger.info(this->measures);
 
     this->measuresReady = true;
-}
-
-void Sensors::saveMeasures() const {
-    Storage.addMeasures(this->measures);
 }
 
 Measures Sensors::getCurrentMeasures() {

@@ -1,7 +1,19 @@
 
+#include <RTClib.cpp>
+
 #include "storage.h"
 
-StorageClass::StorageClass() : logger(F("Storage")), header(this->getLastHeader()) {
+Storage::Storage() : logger(F("Storage")), header(this->getLastHeader()) {
+    if (!this->rtc.begin()) {
+        this->logger.error(F("Could not set up an RTC module"));
+        while (1);  // TODO: display error message on screen
+    }
+
+    if (RESET_TIME || this->rtc.lostPower()) {
+        RTC_DS3231::adjust(DateTime(F(__DATE__), F(__TIME__)));
+        this->logger.info("Time was adjusted:", F(__DATE__), F(__TIME__));
+    }
+
     if (!this->checkHeader(header)) {
         this->logger.error(F("Header corrupted"));
         this->clear();
@@ -19,17 +31,50 @@ StorageClass::StorageClass() : logger(F("Storage")), header(this->getLastHeader(
     }
 }
 
-void StorageClass::addMeasures(Measures const &measures) {
-    // put into RAM
-    this->lastHourStorage[this->lastMeasuresIndex] = measures;
-    CompactMeasures cm = this->measuresToCompactMeasures(measures);
-    this->putCompactMeasures(cm);
-    this->logger.info(F("Added measures"), measures);
-
-    // if we have 6 measures (for 1 hour) put the average measures into EEPROM
+Storage &Storage::getInstance() {
+    static Storage instance;
+    return instance;
 }
 
-StorageClass::CompactMeasures StorageClass::measuresToCompactMeasures(Measures const &measures) {
+void Storage::addMeasures(Measures const &measures) {
+    if (this->getCurrentHourNumber() > this->header.hourNumber) {
+        uint16_t ppm = 0;   // up to 13 measures!!!
+        float temp = 0.0f;     // up to ~ inf measures
+        uint16_t humidity = 0;  // up to 655 measures
+        uint16_t pressHg = 0;   // up to ~82 measures
+
+        for (uint8_t i = 0; i < this->tempMeasuresNumber; ++i) {
+            ppm += this->tempMeasures[i].ppm;
+            temp += this->tempMeasures[i].temp;
+            humidity += this->tempMeasures[i].humidity;
+            pressHg += this->tempMeasures[i].pressHg;
+        }
+
+        CompactMeasures cm = this->measuresToCompactMeasures(Measures(
+                ppm / this->tempMeasuresNumber,
+                temp / float (this->tempMeasuresNumber),
+                humidity / this->tempMeasuresNumber,
+                pressHg / this->tempMeasuresNumber
+        ));
+
+        this->tempMeasuresNumber = 0;
+
+        this->putCompactMeasures(cm);
+    } else {
+        for(uint8_t i = 0; i < this->tempMeasuresNumber - 1; ++i) {
+            this->tempMeasures[i] = this->tempMeasures[i + 1];
+        }
+
+        this->tempMeasuresNumber = this->tempMeasuresNumber + 1 > TEMP_MEASURES_NUMBER ? TEMP_MEASURES_NUMBER : this->tempMeasuresNumber + 1;
+        this->tempMeasures[this->tempMeasuresNumber - 1] = measures;
+
+        for(uint8_t i = 0; i < 6; i++) {
+            this->logger.info(this->tempMeasures[i]);
+        }
+    }
+}
+
+Storage::CompactMeasures Storage::measuresToCompactMeasures(Measures const &measures) {
     return {
             uint8_t((measures.ppm - 410) / 18),
             uint8_t((measures.temp - 10) / 30 * 255),
@@ -38,15 +83,15 @@ StorageClass::CompactMeasures StorageClass::measuresToCompactMeasures(Measures c
     };
 }
 
-StorageClass::Header StorageClass::getLastHeader() {
+Storage::Header Storage::getLastHeader() {
     uint16_t headerPtr = HEADER_START;
     Header header{};
     EEPROM.get(headerPtr, header);
     headerPtr += sizeof(Header);
-    uint8_t monthNumber;
+    uint8_t hourNumber;
     for (uint8_t i = 1; i < 12; ++i, headerPtr += sizeof(Header)) {
-        monthNumber = EEPROM.read(uint16_t(headerPtr + offsetof(struct Header, monthNumber)));
-        if (monthNumber > header.monthNumber) {
+        hourNumber = EEPROM.read(uint16_t(headerPtr + offsetof(struct Header, hourNumber)));
+        if (hourNumber > header.hourNumber) {
             EEPROM.get(headerPtr, header);
         } else {
             break;
@@ -56,7 +101,7 @@ StorageClass::Header StorageClass::getLastHeader() {
     return header;
 }
 
-Measures StorageClass::compactMeasuresToMeasures(StorageClass::CompactMeasures &measures) {
+Measures Storage::compactMeasuresToMeasures(Storage::CompactMeasures &measures) {
     return Measures(
             uint16_t(measures.ppm * 18 + 410),
             float(measures.temp) / 255 * 30 + 10,
@@ -66,12 +111,17 @@ Measures StorageClass::compactMeasuresToMeasures(StorageClass::CompactMeasures &
 }
 
 
-Measures StorageClass::getLastMeasures() {
-    auto compactMeasures = this->getCompactMeasures(this->lastMeasuresIndex);
+Measures Storage::getLastMeasures() {
+    auto compactMeasures = this->getCompactMeasures(this->tempMeasuresNumber);
     return this->compactMeasuresToMeasures(compactMeasures);
 }
 
-uint32_t StorageClass::crcTick(uint32_t crc, uint8_t byte) {
+
+Measures* Storage::getTempMeasures() {
+    return this->tempMeasures;
+}
+
+uint32_t Storage::crcTick(uint32_t crc, uint8_t byte) {
     const unsigned long crc_table[16] = {
             0x00000000, 0x1db71064, 0x3b6e20c8, 0x26d930ac,
             0x76dc4190, 0x6b6b51f4, 0x4db26158, 0x5005713c,
@@ -85,20 +135,20 @@ uint32_t StorageClass::crcTick(uint32_t crc, uint8_t byte) {
     return ~crc;
 }
 
-uint32_t StorageClass::getCRC() {
-    return this->getCRC(MEASURES_START, EEPROM.length());
+uint32_t Storage::getCRC() {
+    return this->getCRC(MEASURES_START, MEASURES_END);
 }
 
-uint32_t StorageClass::getCRC(uint16_t start, uint16_t end) {
+uint32_t Storage::getCRC(uint16_t start, uint16_t end) {
     uint32_t crc = ~0LU;
 
-    for (uint16_t index = start; index < end; ++index) {
+    for (uint16_t index = start; index <= end; ++index) {
         crc = this->crcTick(crc, EEPROM[index]);
     }
     return crc;
 }
 
-uint32_t StorageClass::getCRC(StorageClass::Header &header) {
+uint32_t Storage::getCRC(Storage::Header &header) {
     uint32_t crc = ~0LU;
 
     uint8_t *headerBytes = reinterpret_cast<uint8_t *>(&header);
@@ -110,14 +160,14 @@ uint32_t StorageClass::getCRC(StorageClass::Header &header) {
 }
 
 
-void StorageClass::clear() {
+void Storage::clear() {
     for (auto i = EEPROM.begin(); i < EEPROM.end(); ++i) {
         EEPROM.update(i, 0);
     }
     this->logger.info(F("EEPROM was cleared"));
 }
 
-uint8_t StorageClass::putCompactMeasures(CompactMeasures &measures) {
+uint8_t Storage::putCompactMeasures(CompactMeasures &measures) {
     uint16_t ptr = MEASURES_START + this->header.lastIndex * sizeof(measures);
     uint8_t lastIndex = this->header.lastIndex;
 
@@ -128,6 +178,8 @@ uint8_t StorageClass::putCompactMeasures(CompactMeasures &measures) {
         ++lastIndex;
     }
 
+    EEPROM.put(ptr, measures);
+
     this->header = this->computeHeader(lastIndex);
     this->saveHeader();
 
@@ -136,37 +188,50 @@ uint8_t StorageClass::putCompactMeasures(CompactMeasures &measures) {
     return lastIndex; // TODO: return something more useful
 }
 
-StorageClass::CompactMeasures StorageClass::getCompactMeasures(uint16_t index) {
+Storage::CompactMeasures Storage::getCompactMeasures(uint16_t index) {
     uint16_t measurePtr = MEASURES_START + index * sizeof(CompactMeasures);
     CompactMeasures cm{};
     EEPROM.get(measurePtr, cm);
     return cm;
 }
 
-uint8_t StorageClass::getCurrentMonthNumber() {
-    return MONTH_NUM;
+uint16_t Storage::getCurrentHourNumber() {
+    this->logger.info(F("Compute current hour number"));
+    const auto shift = DateTime(2019, 12, 1);
+    this->logger.info(F("2020 shift:"), shift.secondstime());
+    DateTime now = RTC_DS3231::now();
+    this->logger.info(F("Current shift:"), now.secondstime());
+    return (now.secondstime() - shift.secondstime()) / 3600;
 }
 
-StorageClass::Header StorageClass::computeHeader(uint8_t lastIndex) {
+uint8_t Storage::getCurrentHeaderIndex() {
+    return RTC_DS3231::now().month();
+}
+
+
+Storage::Header Storage::computeHeader(uint8_t lastIndex) {
     Header header{};
     header.crc = this->getCRC();
-    header.monthNumber = this->getCurrentMonthNumber();
+    header.hourNumber = this->getCurrentHourNumber();
     header.lastIndex = lastIndex;
     header.headerCrc = this->getCRC(header);
     header.rest = 0U;
     return header;
 }
 
-uint16_t StorageClass::getCurrentHeaderPtr() {
-    return HEADER_START + (this->getCurrentMonthNumber() * sizeof(Header));
+uint16_t Storage::getCurrentHeaderPtr() {
+    return HEADER_START + (this->getCurrentHeaderIndex() * sizeof(Header));
 }
 
-void StorageClass::saveHeader() {
+void Storage::saveHeader() {
+    this->logger.info(F("Save header at index"), this->getCurrentHeaderIndex());
     EEPROM.put(this->getCurrentHeaderPtr(), this->header);
 }
 
-bool StorageClass::checkHeader(StorageClass::Header &header) {
+bool Storage::checkHeader(Storage::Header &header) {
+    this->logger.info(F("Header. lastIndex:"), this->header.lastIndex, F("crc:"), this->header.headerCrc);
     uint32_t headerCrc = this->getCRC(header);
+    this->logger.info(F("Computed crc:"), headerCrc);
     return header.headerCrc == headerCrc;
 }
 

@@ -5,10 +5,10 @@
 
 #include <Wire.h>
 
+#include "logger.h"
 #include "display.h"
 #include "Menu.h"
 #include "sensors.h"
-#include "logger.h"
 #include "storage.h"
 
 
@@ -19,14 +19,14 @@ Menu *menu;
 
 void setup() {
     logger = new Logger(F("main"));
+//    logger->printMemoryDump();
+
     logger->info(F("Starting setup"));
     sensors = new Sensors();
     display = new Display();
     menu = new Menu(display, sensors);
     menu->show();
     logger->info(F("Setup is finished"));
-
-    Storage.addMeasures(sensors->getCurrentMeasures());
 }
 
 void loop() {

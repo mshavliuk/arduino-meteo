@@ -1,8 +1,10 @@
 #pragma once
 
 #include <inttypes.h>
+#include <RTClib.h>
 
 #include "../sensors.h"
+#include "../storage.h"
 #include "Page.h"
 
 #define PRESS_WIDTH 3

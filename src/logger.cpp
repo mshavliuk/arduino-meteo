@@ -2,54 +2,36 @@
 
 #include "logger.h"
 
+#include <MemoryFree.h>
+
 Logger::Logger(const __FlashStringHelper *name, Levels level) : name(name), level(level) {
     Serial.begin(9600);
 }
 
-template<typename... Args>
-void Logger::error(Args... args) {
-    if (!this->level >= ERROR) {
-        return;
-    }
 
-    this->print('[');
-    this->print(this->name);
-    this->print(F("] "));
-    Serial.print(F("ERROR: "));
-    this->print(args...);
-    Serial.println();
-    Serial.flush();
-}
 
 #if DEBUG
-
-template<typename... Args>
-void Logger::info(Args... args) {
-    if (!this->level >= INFO) {
-        return;
-    }
-
-    this->print('[');
-    this->print(this->name);
-    this->print(F("] "));
-    Serial.print(F("INFO: "));
-    this->print(args...);
+void Logger::printFreeMem() {
+    this->print(F("Free mem:"), freeMemory());
     Serial.println();
     Serial.flush();
 }
 
+void Logger::printMemoryDump() {
+    this->printFreeMem();
+    uint8_t *ptr = 0;
+    Serial.println(F("Memory dump:"));
+    for(uint16_t i = 0; i < 2048; ++i) {
+        Serial.print(ptr[i], HEX);
+        Serial.print(' ');
+        if(i != 0 && i % 8 == 0) {
+            Serial.println(' ');
+        }
+    }
+    Serial.println(' ');
+    Serial.println(F("-------------END--------------"));
+}
 #endif
 
 void Logger::noop() {}
 
-template<typename T, typename... Args>
-void Logger::print(T t, Args... args) {
-    Serial.print(t);
-    Serial.print(' ');
-    this->print(args...);
-}
-
-template<typename T>
-void Logger::print(T t) {
-    Serial.print(t);
-}

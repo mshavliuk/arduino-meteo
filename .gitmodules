@@ -19,3 +19,6 @@
 [submodule "libraries/LiquidCrystal_I2C"]
 	path = libraries/LiquidCrystal_I2C
 	url = https://github.com/johnrickman/LiquidCrystal_I2C.git
+[submodule "libraries/MemoryFree"]
+	path = libraries/MemoryFree
+	url = https://github.com/mpflaga/Arduino-MemoryFree.git

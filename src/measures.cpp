@@ -1,8 +1,6 @@
 
 #include "measures.h"
 
-#include <Wire.h>
-
 Measures::Measures(uint16_t ppm, float temp, uint8_t humidity, uint16_t press)
         : ppm(ppm), temp(temp), humidity(humidity), pressHg(press) {}
 

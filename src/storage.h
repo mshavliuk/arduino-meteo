@@ -3,27 +3,35 @@
 #include <Arduino.h>
 #include <EEPROM.h>
 #include <inttypes.h>
+#include <RTClib.h>
 
-#include "measures.h"
 #include "logger.h"
+#include "measures.h"
 
 #define HEADER_START 0x00
-#define HEADER_END (sizeof(StorageClass::Header) * 12)
+#define HEADER_END (sizeof(Storage::Header) * 12)
 #define MEASURES_START HEADER_END
-#define MEASURES_END EEPROM.end()
+#define MEASURES_END EEPROM.end() - 1
 // TODO: replace with real month number from RTC
-#define MONTH_NUM 0
-// TODO: define header rotation size (and replace '12' with it)
+#define RESET_TIME false
+#define TEMP_MEASURES_NUMBER 6
 
-class StorageClass {
+class Storage {
 public:
-    StorageClass();
     void addMeasures(Measures const &measures);
+
     Measures getLastMeasures();
 
-    StorageClass(StorageClass const&) = delete;
-    void operator=(StorageClass const&)  = delete;
+    Measures *getTempMeasures();
+
+    static Storage &getInstance();
+
+    Storage(Storage const &) = delete;
+
+    void operator=(Storage const &) = delete;
+
 private:
+    Storage();
 
     struct CompactMeasures {
         uint8_t ppm;
@@ -35,31 +43,48 @@ private:
     struct Header {
         uint32_t crc;
         uint8_t lastIndex;
-        uint8_t monthNumber;
-        uint16_t rest;          // TODO: store something useful
+        uint16_t hourNumber;
+        uint8_t rest;          // TODO: store something useful
         uint32_t headerCrc;
     };
 
     Logger logger;
     Header header;
-    Measures lastHourStorage[6];
-    uint8_t lastMeasuresIndex = 0;
+    Measures tempMeasures[TEMP_MEASURES_NUMBER];
+    uint8_t tempMeasuresNumber = 0; // temp means temporary, but NOT temperature
+    RTC_DS3231 rtc;
 
-    uint8_t putCompactMeasures(CompactMeasures&);
+    uint8_t putCompactMeasures(CompactMeasures &);
+
     CompactMeasures getCompactMeasures(uint16_t);
+
     CompactMeasures measuresToCompactMeasures(Measures const &);
+
     uint32_t getCRC(uint16_t, uint16_t);
+
     uint32_t getCRC();
-    uint32_t getCRC(Header&);
-    Measures compactMeasuresToMeasures(CompactMeasures&);
+
+    uint32_t getCRC(Header &);
+
+    Measures compactMeasuresToMeasures(CompactMeasures &);
+
     Header getLastHeader();
-    uint8_t getCurrentMonthNumber();
+
+    uint16_t getCurrentHourNumber();
+
+    uint8_t getCurrentHeaderIndex();
+
     void clear();
+
     Header computeHeader(uint8_t);
+
     void saveHeader();
+
     uint16_t getCurrentHeaderPtr();
-    bool checkHeader(Header&);
+
+    bool checkHeader(Header &);
+
     uint32_t crcTick(uint32_t, uint8_t);
 };
 
-static StorageClass Storage;
+//static StorageClass Storage;
