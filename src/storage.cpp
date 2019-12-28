@@ -3,31 +3,33 @@
 
 #include "storage.h"
 
-Storage::Storage() : logger(F("Storage")), header(this->getLastHeader()) {
+Storage::Storage() : logger(new Logger(F("Storage"))), header(this->getLastHeader()) {
     if (!this->rtc.begin()) {
-        this->logger.error(F("Could not set up an RTC module"));
+        this->logger->error(F("Could not set up an RTC module"));
         while (1);  // TODO: display error message on screen
     }
 
+    this->rtc.begin();
+
     if (RESET_TIME || this->rtc.lostPower()) {
         RTC_DS3231::adjust(DateTime(F(__DATE__), F(__TIME__)));
-        this->logger.info("Time was adjusted:", F(__DATE__), F(__TIME__));
+        this->logger->info("Time was adjusted:", F(__DATE__), F(__TIME__));
     }
 
     if (!this->checkHeader(header)) {
-        this->logger.error(F("Header corrupted"));
+        this->logger->error(F("Header corrupted"));
         this->clear();
         this->header = this->computeHeader(0);
         this->saveHeader();
     }
 
     if (this->header.crc != this->getCRC()) {
-        this->logger.error(F("EEPROM data corrupted"));
+        this->logger->error(F("EEPROM data corrupted. header.crc:"), this->header.crc, F("; actual crc:"), this->getCRC());
         this->clear();
         this->header = this->computeHeader(0);
         this->saveHeader();
     } else {
-        this->logger.info(F("EEPROM data is ok! CRC:"), this->header.crc);
+        this->logger->info(F("EEPROM data is ok! CRC:"), this->header.crc);
     }
 }
 
@@ -37,7 +39,17 @@ Storage &Storage::getInstance() {
 }
 
 void Storage::addMeasures(Measures const &measures) {
+    Wire.begin();
+    uint8_t currentMinute = RTC_DS3231::now().minute();
+//    if(currentMinute % (60 / TEMP_MEASURES_NUMBER) != 0 || currentMinute == lastMinuteNumber) {
+    if(currentMinute == lastMinuteNumber) {
+        this->logger->info(F("Skip measures. Last minute:"), this->lastMinuteNumber);
+        return;
+    }
+
     if (this->getCurrentHourNumber() > this->header.hourNumber) {
+        this->logger->info(F("Current hour is over. Put values to EEPROM"));
+
         uint16_t ppm = 0;   // up to 13 measures!!!
         float temp = 0.0f;     // up to ~ inf measures
         uint16_t humidity = 0;  // up to 655 measures
@@ -60,17 +72,19 @@ void Storage::addMeasures(Measures const &measures) {
         this->tempMeasuresNumber = 0;
 
         this->putCompactMeasures(cm);
-    } else {
-        for(uint8_t i = 0; i < this->tempMeasuresNumber - 1; ++i) {
-            this->tempMeasures[i] = this->tempMeasures[i + 1];
-        }
+    }
 
-        this->tempMeasuresNumber = this->tempMeasuresNumber + 1 > TEMP_MEASURES_NUMBER ? TEMP_MEASURES_NUMBER : this->tempMeasuresNumber + 1;
-        this->tempMeasures[this->tempMeasuresNumber - 1] = measures;
+    this->lastMinuteNumber = currentMinute;
 
-        for(uint8_t i = 0; i < 6; i++) {
-            this->logger.info(this->tempMeasures[i]);
-        }
+    for(uint8_t i = 0; i < this->tempMeasuresNumber - 1; ++i) {
+        this->tempMeasures[i] = this->tempMeasures[i + 1];
+    }
+
+    this->tempMeasuresNumber = this->tempMeasuresNumber + 1 > TEMP_MEASURES_NUMBER ? TEMP_MEASURES_NUMBER : this->tempMeasuresNumber + 1;
+    this->tempMeasures[this->tempMeasuresNumber - 1] = measures;
+
+    for(uint8_t i = 0; i < 6; i++) {
+        this->logger->info(this->tempMeasures[i]);
     }
 }
 
@@ -88,12 +102,12 @@ Storage::Header Storage::getLastHeader() {
     Header header{};
     EEPROM.get(headerPtr, header);
     headerPtr += sizeof(Header);
-    uint8_t hourNumber;
-    for (uint8_t i = 1; i < 12; ++i, headerPtr += sizeof(Header)) {
+    uint16_t hourNumber = 0;
+    for (uint8_t i = 0; i < 12; ++i, headerPtr += sizeof(Header)) {
         hourNumber = EEPROM.read(uint16_t(headerPtr + offsetof(struct Header, hourNumber)));
         if (hourNumber > header.hourNumber) {
             EEPROM.get(headerPtr, header);
-        } else {
+        } else if (hourNumber < header.hourNumber){
             break;
         }
     }
@@ -143,8 +157,13 @@ uint32_t Storage::getCRC(uint16_t start, uint16_t end) {
     uint32_t crc = ~0LU;
 
     for (uint16_t index = start; index <= end; ++index) {
+        if(EEPROM[index] != 0) {
+            this->logger->info(F("Not null EEPROM data:"), EEPROM[index]);
+        }
         crc = this->crcTick(crc, EEPROM[index]);
     }
+    this->logger->info(F("Crc computed:"), start, end, crc);
+
     return crc;
 }
 
@@ -155,6 +174,7 @@ uint32_t Storage::getCRC(Storage::Header &header) {
     for (auto i = 0; i < offsetof(struct Header, headerCrc); ++i) {
         crc = this->crcTick(crc, headerBytes[i]);
     }
+    this->logger->info(F("header crc computed:"), crc);
 
     return crc;
 }
@@ -164,7 +184,7 @@ void Storage::clear() {
     for (auto i = EEPROM.begin(); i < EEPROM.end(); ++i) {
         EEPROM.update(i, 0);
     }
-    this->logger.info(F("EEPROM was cleared"));
+    this->logger->info(F("EEPROM was cleared"));
 }
 
 uint8_t Storage::putCompactMeasures(CompactMeasures &measures) {
@@ -183,7 +203,7 @@ uint8_t Storage::putCompactMeasures(CompactMeasures &measures) {
     this->header = this->computeHeader(lastIndex);
     this->saveHeader();
 
-    this->logger.info(F("Measures were written to EEPROM. LastIndex:"), lastIndex);
+    this->logger->info(F("Measures were written to EEPROM. LastIndex:"), lastIndex);
 
     return lastIndex; // TODO: return something more useful
 }
@@ -196,16 +216,18 @@ Storage::CompactMeasures Storage::getCompactMeasures(uint16_t index) {
 }
 
 uint16_t Storage::getCurrentHourNumber() {
-    this->logger.info(F("Compute current hour number"));
+    this->logger->info(F("Compute current hour number"));
     const auto shift = DateTime(2019, 12, 1);
-    this->logger.info(F("2020 shift:"), shift.secondstime());
+    this->logger->info(F("2020 shift:"), shift.secondstime());
+    Wire.begin();
     DateTime now = RTC_DS3231::now();
-    this->logger.info(F("Current shift:"), now.secondstime());
+    this->logger->info(F("Current shift:"), now.secondstime());
     return (now.secondstime() - shift.secondstime()) / 3600;
 }
 
 uint8_t Storage::getCurrentHeaderIndex() {
-    return RTC_DS3231::now().month();
+    Wire.begin();
+    return RTC_DS3231::now().month() - 1;
 }
 
 
@@ -214,8 +236,8 @@ Storage::Header Storage::computeHeader(uint8_t lastIndex) {
     header.crc = this->getCRC();
     header.hourNumber = this->getCurrentHourNumber();
     header.lastIndex = lastIndex;
-    header.headerCrc = this->getCRC(header);
     header.rest = 0U;
+    header.headerCrc = this->getCRC(header);
     return header;
 }
 
@@ -224,14 +246,19 @@ uint16_t Storage::getCurrentHeaderPtr() {
 }
 
 void Storage::saveHeader() {
-    this->logger.info(F("Save header at index"), this->getCurrentHeaderIndex());
+    this->logger->info(F("Save header at index"), this->getCurrentHeaderIndex());
     EEPROM.put(this->getCurrentHeaderPtr(), this->header);
+
+    Header header = this->getLastHeader();
+    if(this->header.crc != header.crc || this->header.hourNumber != header.hourNumber || this->header.headerCrc != header.headerCrc) {
+        this->logger->error(F("Header save error"));
+    }
+//    this->logger->info(F(""))
 }
 
 bool Storage::checkHeader(Storage::Header &header) {
-    this->logger.info(F("Header. lastIndex:"), this->header.lastIndex, F("crc:"), this->header.headerCrc);
+    this->logger->info(F("Header. lastIndex:"), this->header.lastIndex, F("crc:"), this->header.crc);
     uint32_t headerCrc = this->getCRC(header);
-    this->logger.info(F("Computed crc:"), headerCrc);
     return header.headerCrc == headerCrc;
 }
 

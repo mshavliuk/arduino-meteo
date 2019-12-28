@@ -5,7 +5,7 @@
 #include <MemoryFree.h>
 
 Logger::Logger(const __FlashStringHelper *name, Levels level) : name(name), level(level) {
-    Serial.begin(9600);
+//    Serial.begin(9600);
 }
 
 

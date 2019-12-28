@@ -14,24 +14,30 @@
 #define MHZ_TX 3
 #define PASCAL_TO_MM_HG 0.00750062
 #define TAKE_MEASURES_INTERVAL 5000
-#define SAVE_MEASURES_INTERVAL 5000
-
 
 
 class Sensors {
 public:
-    Sensors();
+    static Sensors &get();
+
     bool isReady();
+
     bool isMeasuresReady();
+
     bool tick();
+
+    Sensors(Sensors const &) = delete;
+
+    void operator=(Sensors const &) = delete;
 
     Measures getCurrentMeasures();
 
 private:
+    Sensors();
+
     Measures measures;
-    Logger logger;
+    Logger *logger;
     GTimer takeMeasuresTimer;
-    GTimer saveMeasuresTimer;
     MHZ19_uart mhz19;
     Adafruit_BME280 bme;
     bool ready = false;

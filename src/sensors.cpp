@@ -6,13 +6,12 @@ Sensors::Sensors() :
         measures({}),
         mhz19(MHZ_TX, MHZ_RX),
         takeMeasuresTimer(MS, TAKE_MEASURES_INTERVAL),
-        saveMeasuresTimer(MS, SAVE_MEASURES_INTERVAL),
-        logger(F("Sensors")) {
-    this->logger.info(F("Starting setup"));
+        logger(new Logger(F("Sensors"))) {
+    this->logger->info(F("Starting setup"));
     this->mhz19.setAutoCalibration(false);
 
     if (!this->bme.begin(&Wire)) {
-        this->logger.error(F("Could not find a valid BME280 sensor, check wiring!"));
+        this->logger->error(F("Could not find a valid BME280 sensor, check wiring!"));
         while (1);  // TODO: display error message on screen
     }
 
@@ -21,7 +20,7 @@ Sensors::Sensors() :
                           Adafruit_BME280::SAMPLING_X16,
                           Adafruit_BME280::SAMPLING_X16,
                           Adafruit_BME280::FILTER_OFF);
-    this->logger.info(F("Setup is finished"));
+    this->logger->info(F("Setup is finished"));
 }
 
 bool Sensors::isReady() {
@@ -46,10 +45,7 @@ bool Sensors::tick() {
         return false;
     }
     this->takeMeasures();
-
-    if (this->saveMeasuresTimer.isReady()) {
-        Storage::getInstance().addMeasures(this->measures);
-    }
+    Storage::getInstance().addMeasures(this->measures);
 
     return true;
 }
@@ -64,11 +60,16 @@ void Sensors::takeMeasures() {
             uint8_t(bme.readHumidity()),
             uint16_t(bme.readPressure() * PASCAL_TO_MM_HG)
     );
-    this->logger.info(this->measures);
+    this->logger->info(this->measures);
 
     this->measuresReady = true;
 }
 
 Measures Sensors::getCurrentMeasures() {
     return this->measures;
+}
+
+Sensors &Sensors::get() {
+    static Sensors instance;
+    return instance;
 }

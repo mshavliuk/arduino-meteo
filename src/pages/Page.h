@@ -1,14 +1,18 @@
 #pragma once
 
 #include "../display.h"
+#define LOG_LEVEL Logger::INFO
 
 class Page {
 public:
-    Page(const __FlashStringHelper *name) : logger(name, LOG_LEVEL) {};
+    Page(const __FlashStringHelper *name) : logger(new Logger(name, LOG_LEVEL)) {};
+    ~Page() {
+        this->logger->info(F("destruct"));
+    }
 
-    virtual void draw(Display *display) = 0;
-    virtual bool tick(Display *display) = 0;
+    virtual void draw() = 0;
+    virtual bool tick() = 0;
 
 protected:
-    Logger logger;
+    Logger *logger;
 };

@@ -15,15 +15,16 @@
 
 class MainPage : public Page {
 public:
-    MainPage(Sensors *sensors);
-    void draw(Display *) override;
-    bool tick(Display *) override;
+    const char weekDays[7][3] = {"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"};
+    explicit MainPage();
+    ~MainPage();
+    void draw() override;
+    bool tick() override;
 
 private:
-    Sensors *sensors;
     GTimer timer;
     bool displayDots;
-    char *itoa(uint16_t, uint8_t, char *, const char * = "", bool = false);
-    char *ftoa(double, uint8_t, uint8_t, char *, const char * = "");
+    char *itoa(uint16_t, uint8_t, char *, bool = false);
+    char *ftoa(double, uint8_t, uint8_t, char *);
     uint16_t ipow(int16_t, uint8_t);
 };

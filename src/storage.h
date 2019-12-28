@@ -9,7 +9,7 @@
 #include "measures.h"
 
 #define HEADER_START 0x00
-#define HEADER_END (sizeof(Storage::Header) * 12)
+#define HEADER_END HEADER_START + sizeof(Storage::Header) * 12
 #define MEASURES_START HEADER_END
 #define MEASURES_END EEPROM.end() - 1
 // TODO: replace with real month number from RTC
@@ -48,8 +48,9 @@ private:
         uint32_t headerCrc;
     };
 
-    Logger logger;
+    Logger *logger;
     Header header;
+    uint8_t lastMinuteNumber = -1;
     Measures tempMeasures[TEMP_MEASURES_NUMBER];
     uint8_t tempMeasuresNumber = 0; // temp means temporary, but NOT temperature
     RTC_DS3231 rtc;

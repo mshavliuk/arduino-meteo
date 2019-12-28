@@ -2,13 +2,16 @@
 #include "MainPage.h"
 
 
-MainPage::MainPage(Sensors *sensors) : Page(F("MainPage")), sensors(sensors), timer(MS, 500), displayDots(true) {}
+MainPage::MainPage() : Page(F("MainPage")), timer(MS, 1000), displayDots(true) {}
 
-void MainPage::draw(Display *display) {
-    this->logger.info(F("draw MainPage"));
 
-    if (!sensors->isMeasuresReady()) {
-        display->write("Waiting for sensors", 0, 1);
+MainPage::~MainPage() {}
+
+void MainPage::draw() {
+    this->logger->info(F("draw MainPage"));
+
+    if (!Sensors::get().isMeasuresReady()) {
+        Display::get().write("Waiting for sensors", 0, 1);
         return;
     }
 
@@ -25,49 +28,54 @@ void MainPage::draw(Display *display) {
             static_cast<char>(now.minute() % 10 + '0'),
             '\0'
     };
-    display->write(timeString, 0, 0, Display::BIG);
-    // TODO: display date
-    // TODO: display day of the week
+    Display::get().write(timeString, 0, 0, Display::BIG);
+    char dateString[6] = "  /  ";
+    itoa(now.day(), 2, dateString, true);
+    itoa(now.month(), 2, dateString + 3, true);
+    Display::get().write(dateString, 15, 0);
 
-    Measures measures = this->sensors->getCurrentMeasures();
-    char tempString[TEMP_WIDTH + sizeof("\xDF")];
-    this->ftoa(measures.temp, 4, 1, tempString, "\xDF");
-    display->write(tempString, 6, 2);
+    Display::get().write("    ", 15, 1); // TODO: remove
+    Display::get().write(this->weekDays[now.dayOfTheWeek()], 15, 1);
 
-    char ppmString[PPM_WIDTH + sizeof("ppm")];
-    this->itoa(measures.ppm, 4, ppmString, "ppm");
-    display->write(ppmString, 4, 3);
+    Measures measures = Sensors::get().getCurrentMeasures();
+    char tempString[] = "99.9\xDF";
+    this->ftoa(measures.temp, 4, 1, tempString);
+    Display::get().write(tempString, 6, 2);
 
-    char humidityString[HUMID_WIDTH + sizeof("%")];
-    itoa((uint8_t) measures.humidity, HUMID_WIDTH, humidityString, "%");
-    display->write(humidityString, 0, 3);
+    char ppmString[] = "    ppm";
+    this->itoa(measures.ppm, PPM_WIDTH, ppmString, false);
+    Display::get().write(ppmString, 4, 3);
 
-    char pressureString[PRESS_WIDTH + sizeof("mm")];
-    itoa(measures.pressHg, PRESS_WIDTH, pressureString, "mm");
-    display->write(pressureString, 0, 2);
+    char humidityString[] = "  %";
+    itoa((uint8_t) measures.humidity, HUMID_WIDTH, humidityString, false);
+    Display::get().write(humidityString, 0, 3);
 
-    uint16_t ppmArray[6];
-    float tempArray[6];
+    char pressureString[] = "   mm";
+    itoa(measures.pressHg, PRESS_WIDTH, pressureString, false);
+    Display::get().write(pressureString, 0, 2);
+
+    uint16_t ppmArray[TEMP_MEASURES_NUMBER];
+    float tempArray[TEMP_MEASURES_NUMBER];
     Measures *m = Storage::getInstance().getTempMeasures();
-    for(uint8_t i = 0; i < 6; ++i) {
+    for (uint8_t i = 0; i < TEMP_MEASURES_NUMBER; ++i) {
         ppmArray[i] = m[i].ppm;
         tempArray[i] = m[i].temp;
     }
-    display->writeGraphTile(ppmArray, 6, 12, 3);
-    display->writeGraphTile(tempArray, 6, 12, 2);
+    Display::get().writeGraphTile(ppmArray, 12, 3);
+    Display::get().writeGraphTile(tempArray, 12, 2);
 }
 
 
-bool MainPage::tick(Display *display) {
+bool MainPage::tick() {
     if (this->timer.isReady()) {
         this->displayDots = !this->displayDots;
-        this->draw(display);
+        this->draw();
         return true;
     }
     return false;
 }
 
-char* MainPage::itoa(uint16_t n, uint8_t numberMaxWidth, char *buf, const char *postfix, bool leadZero) {
+char *MainPage::itoa(uint16_t n, uint8_t numberMaxWidth, char *buf, bool leadZero) {
     for (uint8_t i = 0; i < numberMaxWidth; ++i) {
         uint8_t digit = (n / (uint16_t) this->ipow(10, numberMaxWidth - i - 1)) % 10;
         if (!leadZero && digit == 0) {
@@ -78,19 +86,14 @@ char* MainPage::itoa(uint16_t n, uint8_t numberMaxWidth, char *buf, const char *
         }
     }
 
-    uint8_t i;
-    for (i = 0; postfix[i] != '\0'; ++i) {
-        buf[numberMaxWidth + i] = postfix[i];
-    }
-
-    buf[numberMaxWidth + i] = '\0';
     return buf;
 }
 
-char* MainPage::ftoa(double n, uint8_t width, uint8_t precision, char *buf, const char *postfix) {
-    this->itoa(n, width - precision - 1, buf, ".");
+char *MainPage::ftoa(double n, uint8_t width, uint8_t precision, char *buf) {
+    this->itoa(n, width - precision - 1, buf, false);
+    buf[width - precision - 1] = '.';
     double fraction = modf(n, &fraction);
-    this->itoa(fraction * ipow(10, precision), precision, &buf[width - precision], postfix, true);
+    this->itoa(fraction * ipow(10, precision), precision, &buf[width - precision], true);
     return buf;
 }
 

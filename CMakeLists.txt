@@ -92,6 +92,12 @@ add_arduino_library(FREE_MEM ${board_id}
         )
 link_arduino_library(${PROJECT_NAME} FREE_MEM ${board_id})
 
+add_arduino_library(GYVER_BUTTON ${board_id}
+        libraries/GyverButton/GyverButton.h
+        libraries/GyverButton/GyverButton.cpp
+        )
+link_arduino_library(${PROJECT_NAME} GYVER_BUTTON ${board_id})
+
 add_arduino_library(TIMER ${board_id}
         libraries/GyverTimer/GyverTimer.h
         libraries/GyverTimer/GyverTimer.cpp)

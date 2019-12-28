@@ -1,7 +1,8 @@
 #pragma once
 
 #include <inttypes.h>
-#include <vector>
+
+#include "GyverButton.h"
 
 #include "sensors.h"
 #include "pages/Page.h"
@@ -10,18 +11,21 @@
 
 class Menu {
 public:
-    explicit Menu(Display *, Sensors *);
-    void show();
+    static Menu &get();
     bool tick();
-    void addPage(Page *);
     void showPage(size_t index);
     void nextPage();
     unsigned int getCurrentPageIndex();
+    Menu(Menu const &) = delete;
+
+    void operator=(Menu const &) = delete;
 
 private:
-    Logger logger;
-    std::vector<Page *> pages;
+    explicit Menu();
+
+    GButton button;
+    Page *currentPage;
+    Logger *logger;
     unsigned int currentPageIndex;
-    Display *display;
     GTimer timer;
 };

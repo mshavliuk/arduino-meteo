@@ -1,16 +1,23 @@
 
 #include "display.h"
 
-Display::Display() : lcd(DISPLAY_ADDR, 20, 4), logger(F("Display"), LOG_LEVEL) {
-    this->logger.info(F("init display"));
+Display::Display() : lcd(DISPLAY_ADDR, 20, 4), logger(new Logger(F("Display"), LOG_LEVEL)) {
+    this->logger->info(F("init display"));
     this->lcd.init();
+    this->lcd.clear();
     this->lcd.backlight();
     this->lcd.cursor_off();
     this->lcd.blink_off();
 }
 
+
+Display &Display::get() {
+    static Display instance;
+    return instance;
+}
+
 uint8_t Display::write(const char *string, const uint8_t x, const uint8_t y, const modes mode) {
-    this->logger.info(F("Writing string:"), string);
+    this->logger->info(F("Writing string:"), string);
 
     if (mode == NORMAL) {
         this->lcd.setCursor(x, y);
@@ -90,7 +97,7 @@ byte_matrix Display::getBigCharByteMatrix(const char character) {
             return {{SPACE},
                     {SPACE}};
         default:
-            this->logger.error(F("Big char is not supported:"), character);
+            this->logger->error(F("Big char is not supported:"), character);
             return {{63},
                     {63}};
     }
@@ -112,11 +119,15 @@ void Display::setBigDigits() {
 
 uint8_t Display::addTile(char_tile tile) {
     if(this->activeTilesNumber == MAX_TILES_NUMBER) {
-        this->logger.error(F("Max active tiles number reached"));
+        this->logger->error(F("Max active tiles number reached"));
         return 0;
     }
-    this->logger.info(F("Add tile"), *tile);
+    this->logger->info(F("Add tile"), *tile);
     this->activeTilesNumber++;
     this->lcd.createChar(this->activeTilesNumber, const_cast<uint8_t *>(tile));
     return this->activeTilesNumber;
+}
+
+void Display::clear() {
+    this->lcd.clear();
 }

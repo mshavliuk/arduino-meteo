@@ -6,32 +6,20 @@
 #include <Wire.h>
 
 #include "logger.h"
-#include "display.h"
 #include "Menu.h"
 #include "sensors.h"
-#include "storage.h"
 
-
-Sensors *sensors;
-Display *display;
 Logger *logger;
-Menu *menu;
 
 void setup() {
+    Serial.begin(9600);
     logger = new Logger(F("main"));
-//    logger->printMemoryDump();
-
-    logger->info(F("Starting setup"));
-    sensors = new Sensors();
-    display = new Display();
-    menu = new Menu(display, sensors);
-    menu->show();
     logger->info(F("Setup is finished"));
 }
 
 void loop() {
-    sensors->tick();
-    menu->tick();
+    Sensors::get().tick();
+    Menu::get().tick();
 }
 
 

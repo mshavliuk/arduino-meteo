@@ -23,7 +23,7 @@ size_t Measures::printTo(Print &p) const {
 }
 
 #else
-size_t Measures::printTo(Print &p) const override {
+size_t Measures::printTo(Print &p) const {
     return 0;
 }
 #endif
