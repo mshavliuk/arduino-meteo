@@ -217,7 +217,7 @@ Storage::CompactMeasures Storage::getCompactMeasures(uint16_t index) {
 
 uint16_t Storage::getCurrentHourNumber() {
     this->logger->info(F("Compute current hour number"));
-    const auto shift = DateTime(2019, 12, 1);
+    const auto shift = DateTime(2020, 1, 1);
     this->logger->info(F("2020 shift:"), shift.secondstime());
     Wire.begin();
     DateTime now = RTC_DS3231::now();

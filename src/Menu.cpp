@@ -5,9 +5,20 @@
 
 #define BTN_PIN 4
 
-Menu::Menu() : currentPageIndex(0), timer(MS, 50), logger(new Logger(F("Menu"))), button(BTN_PIN, LOW_PULL, NORM_OPEN) {
-    this->currentPage = new MainPage();
-//    this->nextPage();
+int *dataGetter() {
+    static int data[] = {1, 2, 3};
+    return data;
+}
+
+Menu::Menu() : currentPageIndex(0), logger(new Logger(F("Menu"))), button(BTN_PIN, LOW_PULL, NORM_OPEN) {
+    this->pages = {
+            []() -> Page * { return new MainPage(); },
+            []() -> Page * {
+                // possible values range - 4*8=0..32
+                return new PlotPage(dataGetter, "Pressure");
+                },
+    };
+    this->showPage(this->currentPageIndex);
 }
 
 Menu &Menu::get() {
@@ -17,50 +28,27 @@ Menu &Menu::get() {
 
 bool Menu::tick() {
     this->button.tick();
-    if(this->button.isClick()) {
+    if (this->button.isClick()) {
         this->nextPage();
     }
     this->currentPage->tick();
 }
 
 void Menu::showPage(size_t index) {
-//    if (index >= this->pages.size()) {
-//        this->logger->error(F("Out of range error"));
-//        return;
-//    }
-
-//    this->pages.at(index)->draw(this->display);
-//    this->currentPageIndex = index;
-
-
-//    this->currentPage->draw();
+    this->currentPage = this->pages.at(index)();
+    this->currentPage->draw();
+    this->currentPageIndex = index;
 }
 
-int * dataGetter() {
-    static int data[] = {1, 2, 3};
-    return data;
-}
 
 void Menu::nextPage() {
     this->logger->info(F("Next page"));
-    this->currentPageIndex = (this->currentPageIndex + 1) % 2;
     delete this->currentPage;
     this->logger->info(F("after delete current page"));
-    Display::get().clear();
-    switch (this->currentPageIndex) {
-        case 0:
-            this->logger->info(F("switch to MainPage"));
-            this->currentPage = new MainPage();
-            break;
-        case 1:
-            this->logger->info(F("switch to PlotPage"));
-            this->currentPage = new PlotPage(dataGetter);
-            break;
-        default:
-            this->logger->error(F("Page with given index does not exist!"));
-    }
-}
 
+    auto newPageIndex = (this->currentPageIndex + 1) % this->pages.size();
+    this->showPage(newPageIndex);
+}
 
 
 unsigned int Menu::getCurrentPageIndex() {

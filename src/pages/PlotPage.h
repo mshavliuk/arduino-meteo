@@ -4,11 +4,11 @@
 
 class PlotPage : public Page {
 public:
-    PlotPage(int *(*fcnPtr)()) : Page(F("PlotPage")), dataGetter(fcnPtr) {}
+    PlotPage(int *(*fcnPtr)(), char* name) : Page(F("PlotPage")), dataGetter(fcnPtr), name(name) {}
 
     void draw() override {
         this->logger->info(F("draw PlotPage"));
-        this->logger->info(F("Given data:"));
+        Display::get().write(this->name, 0, 0);
         for(auto i = 0; i < 3; ++i) {
             this->logger->info(this->dataGetter()[i]);
         }
@@ -21,4 +21,5 @@ public:
 
 private:
     int* (*dataGetter)();
+    char* name;
 };

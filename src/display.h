@@ -27,7 +27,8 @@ class Display {
 public:
     enum modes {
         BIG,
-        NORMAL
+        NORMAL,
+        GRAPH
     };
 
     Display(Display const &) = delete;
@@ -48,8 +49,9 @@ private:
 
     uint8_t writeBig(const char *, uint8_t, uint8_t);
     void setBigDigits();
+    void setGraphTiles();
     uint8_t drawByBytesMatrix(uint8_t, uint8_t, byte_matrix&);
-    byte_matrix getBigCharByteMatrix(char);
+    byte_matrix getBigCharTileMatrix(char);
     uint8_t writeBigDigit(char, uint8_t, uint8_t);
     uint8_t addTile(char_tile);
     // TODO: benchmark

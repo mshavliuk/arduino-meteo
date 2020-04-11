@@ -8,6 +8,7 @@
 #include "pages/Page.h"
 #include "display.h"
 
+#include <vector>
 
 class Menu {
 public:
@@ -26,6 +27,6 @@ private:
     GButton button;
     Page *currentPage;
     Logger *logger;
-    unsigned int currentPageIndex;
-    GTimer timer;
+    uint8_t currentPageIndex;
+    std::vector<Page* (*)()> pages;
 };

@@ -18,7 +18,7 @@ Display &Display::get() {
 
 uint8_t Display::write(const char *string, const uint8_t x, const uint8_t y, const modes mode) {
     this->logger->info(F("Writing string:"), string);
-
+    // TODO: compare with current mode to avoid repeated char setup
     if (mode == NORMAL) {
         this->lcd.setCursor(x, y);
         this->lcd.print(string);
@@ -26,6 +26,8 @@ uint8_t Display::write(const char *string, const uint8_t x, const uint8_t y, con
         this->setBigDigits();
 
         return this->writeBig(string, x, y);
+    } else if (mode == GRAPH) {
+//        this->set
     }
     return 0;
 }
@@ -58,7 +60,7 @@ uint8_t Display::drawByBytesMatrix(uint8_t x, uint8_t y, byte_matrix &charBytes)
     return width;
 }
 
-byte_matrix Display::getBigCharByteMatrix(const char character) {
+byte_matrix Display::getBigCharTileMatrix(const char character) {
     switch (character) {
         case '0':
             return {{FILL, 1, FILL},
@@ -104,7 +106,7 @@ byte_matrix Display::getBigCharByteMatrix(const char character) {
 }
 
 uint8_t Display::writeBigDigit(const char character, const uint8_t x, const uint8_t y) {
-    auto charBytes = this->getBigCharByteMatrix(character);
+    auto charBytes = this->getBigCharTileMatrix(character);
     uint8_t width = this->drawByBytesMatrix(x, y, charBytes);
     return width;
 }
@@ -115,6 +117,23 @@ void Display::setBigDigits() {
         this->lcd.createChar(i, const_cast<uint8_t *>(Display::bigCharBasicTiles[i]));
     }
     this->activeTilesNumber = bigCharTilesNumber;
+}
+
+void Display::setGraphTiles() {
+//        {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F, 0x1F},
+//        {0x1F, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+//        {0x1F, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x1F, 0x1F},
+    for(auto i = 1; i < TILE_HEIGHT; ++i) {
+        auto tile = new uint8_t[TILE_HEIGHT];
+        for(auto j = 0; j <= i; ++j) {
+            tile[j] = 0x1F;
+        }
+        for(auto j = i; j < TILE_HEIGHT; ++j) {
+            tile[j] = 0x00;
+        }
+        this->lcd.createChar(i - 1, tile);
+    }
+    this->activeTilesNumber = TILE_HEIGHT - 2;
 }
 
 uint8_t Display::addTile(char_tile tile) {
